@@ -14,7 +14,6 @@ func RunDatabaseMigrations(db *sql.DB) error {
 		return err
 	}
 
-	// Убедитесь, что путь к миграциям правильный
 	m, err := migrate.NewWithDatabaseInstance(
 		"file://migrations",
 		"postgres",

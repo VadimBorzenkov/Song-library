@@ -1,0 +1,240 @@
+basePath: /
+definitions:
+  handler.DataResponseSong:
+    properties:
+      data:
+        $ref: '#/definitions/models.Song'
+      message:
+        type: string
+    type: object
+  handler.DataResponseSongs:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/models.Song'
+        type: array
+      message:
+        type: string
+    type: object
+  handler.ErrorResponse:
+    properties:
+      error:
+        type: string
+      message:
+        type: string
+    type: object
+  handler.SuccessResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  handler.request:
+    properties:
+      group:
+        type: string
+      song:
+        type: string
+    type: object
+  models.Song:
+    properties:
+      group:
+        type: string
+      id:
+        type: integer
+      link:
+        type: string
+      release_date:
+        type: string
+      song:
+        type: string
+      text:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API for managing time tracking tasks
+  termsOfService: https://example.com
+  title: Online Song Library API
+  version: "1.0"
+paths:
+  /songs/:
+    get:
+      consumes:
+      - application/json
+      description: Fetches a list of songs with optional filters and pagination
+      parameters:
+      - description: Filter by group name
+        in: query
+        name: group
+        type: string
+      - description: Filter by song name
+        in: query
+        name: song
+        type: string
+      - description: Filter by release date
+        in: query
+        name: releaseDate
+        type: string
+      - description: Filter by text content
+        in: query
+        name: text
+        type: string
+      - description: Filter by link
+        in: query
+        name: link
+        type: string
+      - description: Number of results to return (default is 10)
+        in: query
+        name: limit
+        type: integer
+      - description: Page number for pagination (default is 1)
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.DataResponseSongs'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Get songs
+      tags:
+      - songs
+  /songs/add_song:
+    post:
+      consumes:
+      - application/json
+      description: Adds a new song to the library
+      parameters:
+      - description: New song request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.request'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.DataResponseSong'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Add new song
+      tags:
+      - songs
+  /songs/delete_song/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a specific song by ID
+      parameters:
+      - description: Song ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Delete song
+      tags:
+      - songs
+  /songs/get_song/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Fetches a specific song along with its verses by ID
+      parameters:
+      - description: Song ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Number of verses to return (default is 5)
+        in: query
+        name: limit
+        type: integer
+      - description: Offset for verses (default is 0)
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.DataResponseSong'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Get song with verses
+      tags:
+      - songs
+  /songs/update_song/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Updates a specific song by ID
+      parameters:
+      - description: Song ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Song data
+        in: body
+        name: song
+        required: true
+        schema:
+          $ref: '#/definitions/models.Song'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.DataResponseSong'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Update song
+      tags:
+      - songs
+swagger: "2.0"

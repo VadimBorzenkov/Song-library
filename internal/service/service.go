@@ -9,8 +9,7 @@ import (
 )
 
 const (
-	DateFormat      = "2006-01-02 15:04:05"
-	TimestampFormat = "2006-01-02 15:04:05"
+	DateFormat = "2006-01-02 15:04:05"
 )
 
 type SongService interface {
@@ -28,8 +27,8 @@ type ApiService struct {
 	exApi  *externalapi.ExternalApiClient
 }
 
-func NewApiSetvice(repo repository.Repository, logger *logrus.Logger, cfg *config.Config) *ApiService {
-	client := externalapi.NewExternalApiClient(cfg.ExternalApiURL)
+func NewApiService(repo repository.Repository, logger *logrus.Logger, cfg *config.Config) *ApiService {
+	client := externalapi.NewExternalApiClient(cfg.ExternalApiURL, logger)
 	return &ApiService{
 		repo:   repo,
 		logger: logger,

@@ -10,13 +10,11 @@ import (
 func InitLogger() *logrus.Logger {
 	logger := logrus.New()
 
-	// Загрузка переменных окружения из файла .env
 	err := godotenv.Load(".env")
 	if err != nil {
 		logger.Warn("Error loading .env file, using default configuration")
 	}
 
-	// Установка уровня логирования из переменной окружения
 	logLevel := os.Getenv("LOG_LEVEL")
 	switch logLevel {
 	case "debug":
@@ -31,7 +29,6 @@ func InitLogger() *logrus.Logger {
 		logger.SetLevel(logrus.InfoLevel)
 	}
 
-	// Установка формата логов (например, JSON или текст)
 	logFormat := os.Getenv("LOG_FORMAT")
 	if logFormat == "json" {
 		logger.SetFormatter(&logrus.JSONFormatter{})

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"github.com/VadimBorzenkov/online-song-library/internal/models"
 	"github.com/VadimBorzenkov/online-song-library/internal/service"
 	"github.com/gofiber/fiber/v2"
 	"github.com/sirupsen/logrus"
@@ -26,6 +27,16 @@ type SuccessResponse struct {
 type ErrorResponse struct {
 	Error   string `json:"error"`
 	Message string `json:"message"`
+}
+
+type DataResponseSongs struct {
+	Data    []models.Song `json:"data"`
+	Message string        `json:"message"`
+}
+
+type DataResponseSong struct {
+	Data    *models.Song `json:"data"`
+	Message string       `json:"message"`
 }
 
 type ApiHandler struct {

@@ -14,7 +14,6 @@ func (repo *ApiRepository) GetData(filter map[string]string, limit int, offset i
 	query := "SELECT id, group_name, song_name, release_date, text, link FROM songs WHERE 1=1"
 	args := []interface{}{}
 
-	// Добавляем фильтрацию по полям
 	i := 1
 	for key, value := range filter {
 		query += fmt.Sprintf(" AND %s = $%d", key, i)
@@ -22,17 +21,14 @@ func (repo *ApiRepository) GetData(filter map[string]string, limit int, offset i
 		i++
 	}
 
-	// Добавляем параметры LIMIT и OFFSET
 	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", i, i+1)
 	args = append(args, limit, offset)
 
-	// Логируем SQL-запрос
 	repo.logger.WithFields(logrus.Fields{
 		"query": query,
 		"args":  args,
 	}).Debug("Executing GetData query")
 
-	// Выполняем запрос
 	rows, err := repo.db.Query(query, args...)
 	if err != nil {
 		repo.logger.Error("Error executing GetData query: ", err)
@@ -40,7 +36,6 @@ func (repo *ApiRepository) GetData(filter map[string]string, limit int, offset i
 	}
 	defer rows.Close()
 
-	// Сканируем результаты
 	for rows.Next() {
 		var song models.Song
 		if err := rows.Scan(&song.ID, &song.Group, &song.Song, &song.ReleaseDate, &song.Text, &song.Link); err != nil {
@@ -64,15 +59,14 @@ func (repo *ApiRepository) GetSongPagi(id int, limit int, offset int) (*models.S
 		return nil, err
 	}
 
-	// Логируем извлеченные данные о песне
 	repo.logger.WithFields(logrus.Fields{
 		"songID":   id,
 		"songName": song.Song,
 		"group":    song.Group,
 	}).Debug("Successfully fetched song")
 
-	// Разбиваем текст на куплеты по новой строке и применяем пагинацию
-	verses := strings.Split(song.Text, "\n")
+	verses := strings.Split(song.Text, "\n\n")
+
 	if offset >= len(verses) {
 		repo.logger.Warn("Offset out of range for GetSongPagi")
 		return nil, errors.New("offset out of range")
@@ -83,7 +77,7 @@ func (repo *ApiRepository) GetSongPagi(id int, limit int, offset int) (*models.S
 		end = len(verses)
 	}
 
-	song.Text = strings.Join(verses[offset:end], "\n")
+	song.Text = strings.Join(verses[offset:end], "\n\n")
 	repo.logger.Infof("Returning %d verses from song '%s'", end-offset, song.Song)
 	return &song, nil
 }
