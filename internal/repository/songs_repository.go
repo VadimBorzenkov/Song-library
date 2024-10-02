@@ -11,12 +11,18 @@ import (
 
 func (repo *ApiRepository) GetData(filter map[string]string, limit int, offset int) ([]models.Song, error) {
 	var songs []models.Song
-	query := "SELECT id, group_name, song_name, release_date, text, link FROM songs WHERE 1=1"
+	query := "SELECT id, group_name, song_name, COALESCE(release_date::text, '') AS release_date, COALESCE(text, '') AS text, COALESCE(link, '') AS link FROM songs WHERE 1=1"
 	args := []interface{}{}
 
 	i := 1
 	for key, value := range filter {
-		query += fmt.Sprintf(" AND %s = $%d", key, i)
+		if key == "release_date" {
+			// Если фильтр по дате, можно использовать оператор =
+			query += fmt.Sprintf(" AND release_date = $%d", i)
+		} else {
+			// Для остальных полей используем ILIKE
+			query += fmt.Sprintf(" AND %s ILIKE $%d", key, i)
+		}
 		args = append(args, value)
 		i++
 	}

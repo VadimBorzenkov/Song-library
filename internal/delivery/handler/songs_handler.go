@@ -31,8 +31,25 @@ type request struct {
 // @Router /songs/ [get]
 func (h *ApiHandler) GetSongs(ctx *fiber.Ctx) error {
 	filters := make(map[string]string)
-	for _, key := range []string{"group_name", "song_name", "release_date", "text", "link"} {
+
+	h.logger.WithFields(logrus.Fields{
+		"filters": filters,
+	}).Debug("Filters before fetching songs")
+
+	if group := ctx.Query("group"); group != "" {
+		filters["group_name"] = group
+	}
+	if song := ctx.Query("song"); song != "" {
+		filters["song_name"] = song
+	}
+	if releaseDate := ctx.Query("releaseDate"); releaseDate != "" {
+		h.logger.WithField("release_date", releaseDate).Debug("Extracted release date filter value")
+		filters["release_date"] = releaseDate
+	}
+
+	for _, key := range []string{"release_date", "text", "link"} {
 		value := ctx.Query(key)
+		h.logger.WithField(key, value).Debug("Extracted filter value")
 		if value != "" {
 			filters[key] = value
 		}
@@ -61,6 +78,9 @@ func (h *ApiHandler) GetSongs(ctx *fiber.Ctx) error {
 	}
 
 	offset := (page - 1) * limit
+	if offset < 0 {
+		offset = 0
+	}
 
 	h.logger.WithFields(logrus.Fields{
 		"filters": filters,
