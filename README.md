@@ -12,7 +12,7 @@ online-song-library - это проект на Golang, который испол
 
 ## Установка и запуск
 1. Клонируйте репозиторий:
-   git clone "https://github.com/theborzet/time-tracker"
+   git clone "https://github.com/VadimBorzenkov/online-song-library"
 
 2. Скопируйте конфигурации:
     cp example.env .env
