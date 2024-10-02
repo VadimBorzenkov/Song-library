@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/VadimBorzenkov/online-song-library/internal/models"
@@ -32,10 +33,6 @@ type request struct {
 func (h *ApiHandler) GetSongs(ctx *fiber.Ctx) error {
 	filters := make(map[string]string)
 
-	h.logger.WithFields(logrus.Fields{
-		"filters": filters,
-	}).Debug("Filters before fetching songs")
-
 	if group := ctx.Query("group"); group != "" {
 		filters["group_name"] = group
 	}
@@ -43,13 +40,11 @@ func (h *ApiHandler) GetSongs(ctx *fiber.Ctx) error {
 		filters["song_name"] = song
 	}
 	if releaseDate := ctx.Query("releaseDate"); releaseDate != "" {
-		h.logger.WithField("release_date", releaseDate).Debug("Extracted release date filter value")
 		filters["release_date"] = releaseDate
 	}
 
 	for _, key := range []string{"release_date", "text", "link"} {
 		value := ctx.Query(key)
-		h.logger.WithField(key, value).Debug("Extracted filter value")
 		if value != "" {
 			filters[key] = value
 		}
@@ -79,15 +74,12 @@ func (h *ApiHandler) GetSongs(ctx *fiber.Ctx) error {
 
 	offset := (page - 1) * limit
 	if offset < 0 {
-		offset = 0
+		h.logger.WithField("error", err).Warn("Invalid offset value")
+		return ctx.Status(fiber.StatusBadRequest).JSON(ErrorResponse{
+			Error:   "Invalid offset value",
+			Message: "Offset must be a non-negative integer",
+		})
 	}
-
-	h.logger.WithFields(logrus.Fields{
-		"filters": filters,
-		"limit":   limit,
-		"page":    page,
-		"offset":  offset,
-	}).Debug("Fetching songs with filters")
 
 	songs, err := h.serv.GetSongsWithPaginate(filters, limit, offset)
 	if err != nil {
@@ -156,12 +148,6 @@ func (h *ApiHandler) GetSongWithVerses(ctx *fiber.Ctx) error {
 		})
 	}
 
-	h.logger.WithFields(logrus.Fields{
-		"songID": songID,
-		"limit":  limit,
-		"offset": offset,
-	}).Debug("Fetching song with verses")
-
 	song, err := h.serv.GetSongWithVerses(songID, limit, offset)
 	if err != nil {
 		h.logger.WithFields(logrus.Fields{
@@ -175,11 +161,6 @@ func (h *ApiHandler) GetSongWithVerses(ctx *fiber.Ctx) error {
 			Message: "Failed to fetch song with verses",
 		})
 	}
-
-	h.logger.WithFields(logrus.Fields{
-		"song": song.Song,
-		"ID":   song.ID,
-	}).Info("Song with verses fetched successfully")
 
 	return ctx.JSON(DataResponseSong{
 		Data:    song,
@@ -210,7 +191,15 @@ func (h *ApiHandler) DeleteSong(ctx *fiber.Ctx) error {
 
 	h.logger.WithField("songID", songID).Info("Deleting song")
 
-	if err := h.serv.DeleteSong(songID); err != nil {
+	err = h.serv.DeleteSong(songID)
+	if err != nil {
+		if err.Error() == fmt.Sprintf("song with ID %d not found", songID) {
+			return ctx.Status(fiber.StatusNotFound).JSON(ErrorResponse{
+				Error:   "Song not found",
+				Message: fmt.Sprintf("Song with ID %d not found", songID),
+			})
+		}
+
 		h.logger.WithField("songID", songID).Error("Error deleting song")
 		return ctx.Status(fiber.StatusInternalServerError).JSON(ErrorResponse{
 			Error:   "Failed to delete song",
@@ -218,7 +207,6 @@ func (h *ApiHandler) DeleteSong(ctx *fiber.Ctx) error {
 		})
 	}
 
-	h.logger.WithField("songID", songID).Info("Song deleted successfully")
 	return ctx.JSON(SuccessResponse{
 		Message: "Song deleted successfully",
 	})
@@ -257,11 +245,13 @@ func (h *ApiHandler) UpdateSong(ctx *fiber.Ctx) error {
 
 	songData.ID = songID
 
-	h.logger.WithFields(logrus.Fields{
-		"songID": songID,
-		"song":   songData.Song,
-		"group":  songData.Group,
-	}).Info("Updating song")
+	if songData.Song == "" && songData.Group == "" && songData.Text == "" && songData.Link == "" && songData.ReleaseDate == "" {
+		h.logger.WithField("songID", songID).Error("No fields to update")
+		return ctx.Status(fiber.StatusBadRequest).JSON(ErrorResponse{
+			Error:   "Failed to update song",
+			Message: "no fields to update",
+		})
+	}
 
 	if err := h.serv.UpdateSong(&songData); err != nil {
 		h.logger.WithField("songID", songID).Error("Error updating song")
@@ -271,7 +261,6 @@ func (h *ApiHandler) UpdateSong(ctx *fiber.Ctx) error {
 		})
 	}
 
-	h.logger.WithField("songID", songID).Info("Song updated successfully")
 	return ctx.JSON(DataResponseSong{
 		Data:    &songData,
 		Message: "Song updated successfully",
@@ -306,12 +295,6 @@ func (h *ApiHandler) AddNewSong(ctx *fiber.Ctx) error {
 			Message: "Please provide both group and song names",
 		})
 	}
-
-	h.logger.WithFields(logrus.Fields{
-		"group": req.Group,
-		"song":  req.Song,
-	}).Info("Adding new song")
-
 	newSong, err := h.serv.AddNewSong(req.Group, req.Song)
 	if err != nil {
 		h.logger.WithFields(logrus.Fields{

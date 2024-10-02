@@ -3,10 +3,10 @@ package repository
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/VadimBorzenkov/online-song-library/internal/models"
-	"github.com/sirupsen/logrus"
 )
 
 func (repo *ApiRepository) GetData(filter map[string]string, limit int, offset int) ([]models.Song, error) {
@@ -17,10 +17,8 @@ func (repo *ApiRepository) GetData(filter map[string]string, limit int, offset i
 	i := 1
 	for key, value := range filter {
 		if key == "release_date" {
-			// Если фильтр по дате, можно использовать оператор =
 			query += fmt.Sprintf(" AND release_date = $%d", i)
 		} else {
-			// Для остальных полей используем ILIKE
 			query += fmt.Sprintf(" AND %s ILIKE $%d", key, i)
 		}
 		args = append(args, value)
@@ -29,11 +27,6 @@ func (repo *ApiRepository) GetData(filter map[string]string, limit int, offset i
 
 	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", i, i+1)
 	args = append(args, limit, offset)
-
-	repo.logger.WithFields(logrus.Fields{
-		"query": query,
-		"args":  args,
-	}).Debug("Executing GetData query")
 
 	rows, err := repo.db.Query(query, args...)
 	if err != nil {
@@ -65,12 +58,6 @@ func (repo *ApiRepository) GetSongPagi(id int, limit int, offset int) (*models.S
 		return nil, err
 	}
 
-	repo.logger.WithFields(logrus.Fields{
-		"songID":   id,
-		"songName": song.Song,
-		"group":    song.Group,
-	}).Debug("Successfully fetched song")
-
 	verses := strings.Split(song.Text, "\n\n")
 
 	if offset >= len(verses) {
@@ -88,21 +75,72 @@ func (repo *ApiRepository) GetSongPagi(id int, limit int, offset int) (*models.S
 	return &song, nil
 }
 
-func (r *ApiRepository) DeleteSong(id int) error {
-	_, err := r.db.Exec("DELETE FROM songs WHERE id = $1", id)
+func (r *ApiRepository) DeleteSong(id int) (int64, error) {
+	result, err := r.db.Exec("DELETE FROM songs WHERE id = $1", id)
 	if err != nil {
 		r.logger.Error("Error deleting song: ", err)
-		return err
+		return 0, err
 	}
 
-	r.logger.Infof("Song with ID %d successfully deleted", id)
-	return nil
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		r.logger.Error("Error fetching rows affected: ", err)
+		return 0, err
+	}
+
+	if rowsAffected == 0 {
+		r.logger.Warnf("No song found with ID %d", id)
+	}
+
+	return rowsAffected, nil
 }
 
 func (r *ApiRepository) UpdateSongData(song *models.Song) error {
-	_, err := r.db.Exec(`UPDATE songs SET group_name = $1, song_name = $2, release_date = $3, text = $4, link = $5 WHERE id = $6`,
-		song.Group, song.Song, song.ReleaseDate, song.Text, song.Link, song.ID,
-	)
+	query := `UPDATE songs SET`
+	params := []interface{}{}
+	paramCounter := 1
+
+	if song.Group != "" {
+		query += ` group_name = $` + strconv.Itoa(paramCounter) + `,`
+		params = append(params, song.Group)
+		paramCounter++
+	}
+
+	if song.Song != "" {
+		query += ` song_name = $` + strconv.Itoa(paramCounter) + `,`
+		params = append(params, song.Song)
+		paramCounter++
+	}
+
+	if song.Text != "" {
+		query += ` text = $` + strconv.Itoa(paramCounter) + `,`
+		params = append(params, song.Text)
+		paramCounter++
+	}
+
+	if song.Link != "" {
+		query += ` link = $` + strconv.Itoa(paramCounter) + `,`
+		params = append(params, song.Link)
+		paramCounter++
+	}
+
+	if song.ReleaseDate != "" {
+		query += ` release_date = $` + strconv.Itoa(paramCounter) + `,`
+		params = append(params, song.ReleaseDate)
+		paramCounter++
+	}
+
+	if len(params) == 0 {
+		r.logger.Error("No fields to update")
+		return errors.New("no fields to update")
+	}
+
+	query = query[:len(query)-1]
+
+	query += ` WHERE id = $` + strconv.Itoa(paramCounter)
+	params = append(params, song.ID)
+
+	_, err := r.db.Exec(query, params...)
 	if err != nil {
 		r.logger.Error("Error updating song: ", err)
 		return err

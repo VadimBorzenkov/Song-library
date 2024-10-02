@@ -348,7 +348,7 @@ const docTemplate = `{
         "models.Song": {
             "type": "object",
             "properties": {
-                "group": {
+                "group_name": {
                     "type": "string"
                 },
                 "id": {
@@ -360,7 +360,7 @@ const docTemplate = `{
                 "release_date": {
                     "type": "string"
                 },
-                "song": {
+                "song_name": {
                     "type": "string"
                 },
                 "text": {
